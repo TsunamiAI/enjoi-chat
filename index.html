@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ENJOi Copy Assistant</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & Base ────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --foliage: #0d747b;
+      --warmth: #ecba3a;
+      --sage: #99da9b;
+      --blooms: #f35b6a;
+      --sand: #cea468;
+      --navy: #647892;
+      --bg: #e3e7ee;
+      --white: #ffffff;
+      --sidebar-w: 280px;
+      --header-h: 56px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Raleway', sans-serif;
+      background: var(--bg);
+      color: var(--navy);
+    }
+
+    /* ── n8n Chat Widget Overrides ───────────────────── */
+    :root {
+      --chat--color-primary: var(--foliage);
+      --chat--color-primary-shade-50: #0a5f65;
+      --chat--color-primary-shade-100: #084d52;
+      --chat--color-secondary: var(--sage);
+      --chat--color-secondary-shade-50: #7cc97e;
+      --chat--color-white: var(--white);
+      --chat--color-light: var(--bg);
+      --chat--color-light-shade-50: #d4d9e2;
+      --chat--color-medium: var(--navy);
+      --chat--color-dark: #3a4d63;
+      --chat--color-disabled: #b0b8c4;
+      --chat--color-typing: var(--navy);
+
+      --chat--header--background: var(--foliage);
+      --chat--header--color: var(--white);
+      --chat--heading--font-size: 1rem;
+      --chat--header--padding: 12px 20px;
+      --chat--subtitle--font-size: 0.85rem;
+
+      --chat--textarea--height: 48px;
+      --chat--message--font-size: 0.9rem;
+      --chat--message--padding: 10px 14px;
+      --chat--message--border-radius: 12px;
+      --chat--message-line-height: 1.5;
+      --chat--message--bot--background: var(--white);
+      --chat--message--bot--color: var(--navy);
+      --chat--message--user--background: var(--foliage);
+      --chat--message--user--color: var(--white);
+      --chat--message--pre--background: #f0f2f6;
+
+      --chat--toggle--background: var(--foliage);
+      --chat--toggle--hover--background: #0a5f65;
+      --chat--toggle--active--background: #084d52;
+
+      --chat--body--background: var(--bg);
+      --chat--input--background: var(--white);
+      --chat--input--border: 1px solid #d4d9e2;
+      --chat--input--border-active: 1px solid var(--foliage);
+      --chat--input--color: var(--navy);
+
+      --chat--font-family: 'Raleway', sans-serif;
+      --chat--window--width: 100%;
+      --chat--window--height: 100%;
+      --chat--border-radius: 0;
+    }
+
+    /* Force the embedded chat to fill its container */
+    #chat-container .chat-window { border-radius: 0 !important; }
+    #chat-container { position: relative; }
+
+    /* Bot avatar accent */
+    .chat-message-bot .chat-message-avatar {
+      background: var(--blooms) !important;
+    }
+
+    /* ── Login Screen ───────────────────────────────── */
+    #login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: var(--bg);
+    }
+
+    .login-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .login-card h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--foliage);
+      margin-bottom: 4px;
+    }
+
+    .login-card p {
+      font-size: 0.9rem;
+      color: var(--navy);
+      opacity: 0.7;
+      margin-bottom: 32px;
+    }
+
+    .login-card input {
+      display: block;
+      width: 100%;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      border: 1px solid #d4d9e2;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--navy);
+      transition: border-color 0.2s;
+    }
+
+    .login-card input:focus {
+      outline: none;
+      border-color: var(--foliage);
+    }
+
+    .login-card button {
+      width: 100%;
+      padding: 12px;
+      background: var(--foliage);
+      color: var(--white);
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .login-card button:hover { background: #0a5f65; }
+
+    .login-error {
+      color: var(--blooms);
+      font-size: 0.85rem;
+      margin-top: 12px;
+      display: none;
+    }
+
+    /* ── App Shell ───────────────────────────────────── */
+    #app-shell {
+      display: none;
+      height: 100vh;
+    }
+
+    #app-shell.visible { display: flex; }
+
+    /* ── Sidebar ─────────────────────────────────────── */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--white);
+      border-right: 1px solid #d4d9e2;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid #eef0f4;
+    }
+
+    .sidebar-brand {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--foliage);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+
+    .btn-new-chat {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 16px;
+      background: var(--warmth);
+      color: #3a2e00;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-new-chat:hover { background: #daa830; }
+
+    .btn-new-chat svg { width: 18px; height: 18px; }
+
+    .session-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .session-item {
+      display: block;
+      width: 100%;
+      padding: 12px 16px;
+      background: none;
+      border: none;
+      border-left: 3px solid transparent;
+      text-align: left;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .session-item:hover { background: #f4f6f9; }
+
+    .session-item.active {
+      border-left-color: var(--foliage);
+      background: #edf7f8;
+    }
+
+    .session-title {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--navy);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .session-date {
+      font-size: 0.75rem;
+      color: var(--navy);
+      opacity: 0.5;
+      margin-top: 2px;
+    }
+
+    .session-list-empty {
+      padding: 24px 16px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--navy);
+      opacity: 0.5;
+    }
+
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid #eef0f4;
+      font-size: 0.75rem;
+      color: var(--navy);
+      opacity: 0.4;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .btn-logout {
+      background: none;
+      border: none;
+      color: var(--navy);
+      opacity: 0.5;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.75rem;
+      text-decoration: underline;
+    }
+
+    .btn-logout:hover { opacity: 1; }
+
+    /* ── Main Area ───────────────────────────────────── */
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #main-header {
+      height: var(--header-h);
+      background: var(--foliage);
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    #main-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    #hamburger {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--white);
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    #hamburger svg { width: 24px; height: 24px; }
+
+    #chat-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Hide the n8n chat header since we have our own */
+    #chat-container .chat-header { display: none !important; }
+
+    /* Welcome state */
+    #welcome-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--navy);
+      opacity: 0.5;
+      gap: 12px;
+    }
+
+    #welcome-state svg { width: 48px; height: 48px; opacity: 0.3; }
+    #welcome-state p { font-size: 0.95rem; }
+
+    /* ── Mobile Overlay ──────────────────────────────── */
+    #sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 99;
+    }
+
+    /* ── Responsive ──────────────────────────────────── */
+    @media (max-width: 768px) {
+      #sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: 4px 0 16px rgba(0,0,0,0.1);
+      }
+
+      #sidebar.open {
+        transform: translateX(0);
+      }
+
+      #sidebar.open ~ #sidebar-overlay {
+        display: block;
+      }
+
+      #hamburger { display: block; }
+    }
+
+    /* ── Loading spinner ─────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #d4d9e2;
+      border-top-color: var(--foliage);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .sessions-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--navy);
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Login Screen ──────────────────────────────── -->
+  <div id="login-screen">
+    <div class="login-card">
+      <h1>ENJOi</h1>
+      <p>Copy Assistant</p>
+      <form id="login-form">
+        <input type="text" id="login-user" placeholder="Username" autocomplete="username" required />
+        <input type="password" id="login-pass" placeholder="Password" autocomplete="current-password" required />
+        <button type="submit">Sign In</button>
+      </form>
+      <div class="login-error" id="login-error">Invalid credentials. Please try again.</div>
+    </div>
+  </div>
+
+  <!-- ── App Shell ─────────────────────────────────── -->
+  <div id="app-shell">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">ENJOi Copy Assistant</div>
+        <button class="btn-new-chat" id="btn-new-chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Chat
+        </button>
+      </div>
+      <div class="session-list" id="session-list">
+        <div class="sessions-loading" id="sessions-loading">
+          <span class="spinner"></span> Loading...
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <span id="footer-user"></span>
+        <button class="btn-logout" id="btn-logout">Log out</button>
+      </div>
+    </aside>
+
+    <div id="sidebar-overlay"></div>
+
+    <!-- Main -->
+    <div id="main">
+      <div id="main-header">
+        <button id="hamburger">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <h2>ENJOi Copy Assistant</h2>
+      </div>
+      <div id="chat-container">
+        <div id="welcome-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <p>Start a new chat or select a conversation</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Scripts ───────────────────────────────────── -->
+  <script type="module">
+    import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
+
+    // ── Config ──────────────────────────────────────
+    const WEBHOOK_URL = 'https://belucent.app.n8n.cloud/webhook/a9156c76-48a0-499e-ab90-ecd033752896/chat';
+    const SESSIONS_URL = 'https://belucent.app.n8n.cloud/webhook/enjoi-sessions';
+
+    // ── DOM refs ────────────────────────────────────
+    const loginScreen  = document.getElementById('login-screen');
+    const loginForm    = document.getElementById('login-form');
+    const loginUser    = document.getElementById('login-user');
+    const loginPass    = document.getElementById('login-pass');
+    const loginError   = document.getElementById('login-error');
+    const appShell     = document.getElementById('app-shell');
+    const sidebar      = document.getElementById('sidebar');
+    const overlay      = document.getElementById('sidebar-overlay');
+    const hamburger    = document.getElementById('hamburger');
+    const sessionList  = document.getElementById('session-list');
+    const sessionsLoad = document.getElementById('sessions-loading');
+    const chatContainer= document.getElementById('chat-container');
+    const welcomeState = document.getElementById('welcome-state');
+    const btnNewChat   = document.getElementById('btn-new-chat');
+    const btnLogout    = document.getElementById('btn-logout');
+    const footerUser   = document.getElementById('footer-user');
+
+    // ── State ───────────────────────────────────────
+    let currentSessionId = null;
+    let sessions = [];
+
+    // ── Auth helpers ────────────────────────────────
+    function getAuth() {
+      const u = sessionStorage.getItem('enjoi_user');
+      const p = sessionStorage.getItem('enjoi_pass');
+      if (!u || !p) return null;
+      return { user: u, pass: p, basic: 'Basic ' + btoa(u + ':' + p) };
+    }
+
+    function setAuth(user, pass) {
+      sessionStorage.setItem('enjoi_user', user);
+      sessionStorage.setItem('enjoi_pass', pass);
+    }
+
+    function clearAuth() {
+      sessionStorage.removeItem('enjoi_user');
+      sessionStorage.removeItem('enjoi_pass');
+    }
+
+    // ── Login ───────────────────────────────────────
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      loginError.style.display = 'none';
+
+      const user = loginUser.value.trim();
+      const pass = loginPass.value;
+      if (!user || !pass) return;
+
+      setAuth(user, pass);
+
+      // Validate credentials by fetching sessions
+      try {
+        const res = await fetch(SESSIONS_URL, {
+          headers: { 'Authorization': 'Basic ' + btoa(user + ':' + pass) }
+        });
+        if (!res.ok) throw new Error('auth');
+        enterApp();
+      } catch {
+        clearAuth();
+        loginError.style.display = 'block';
+      }
+    });
+
+    // ── Enter App ───────────────────────────────────
+    function enterApp() {
+      const auth = getAuth();
+      if (!auth) return;
+      loginScreen.style.display = 'none';
+      appShell.classList.add('visible');
+      footerUser.textContent = auth.user;
+      loadSessions();
+    }
+
+    // ── Logout ──────────────────────────────────────
+    btnLogout.addEventListener('click', () => {
+      clearAuth();
+      currentSessionId = null;
+      sessions = [];
+      appShell.classList.remove('visible');
+      loginScreen.style.display = 'flex';
+      loginUser.value = '';
+      loginPass.value = '';
+      loginError.style.display = 'none';
+      destroyChat();
+    });
+
+    // ── Sessions ────────────────────────────────────
+    async function loadSessions() {
+      const auth = getAuth();
+      if (!auth) return;
+
+      sessionsLoad.style.display = 'flex';
+
+      try {
+        const res = await fetch(SESSIONS_URL, {
+          headers: { 'Authorization': auth.basic }
+        });
+        if (!res.ok) throw new Error('fetch');
+        sessions = await res.json();
+        renderSessions();
+      } catch {
+        sessions = [];
+        renderSessions();
+      } finally {
+        sessionsLoad.style.display = 'none';
+      }
+    }
+
+    function renderSessions() {
+      // Clear everything except the loading indicator
+      const items = sessionList.querySelectorAll('.session-item, .session-list-empty');
+      items.forEach(el => el.remove());
+
+      if (sessions.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'session-list-empty';
+        empty.textContent = 'No conversations yet';
+        sessionList.appendChild(empty);
+        return;
+      }
+
+      sessions.forEach(s => {
+        const btn = document.createElement('button');
+        btn.className = 'session-item' + (s.sessionId === currentSessionId ? ' active' : '');
+        btn.dataset.sessionId = s.sessionId;
+
+        const title = document.createElement('div');
+        title.className = 'session-title';
+        title.textContent = s.title || 'Untitled';
+
+        const date = document.createElement('div');
+        date.className = 'session-date';
+        date.textContent = formatRelativeTime(s.date || s.updatedAt || s.createdAt);
+
+        btn.appendChild(title);
+        btn.appendChild(date);
+        btn.addEventListener('click', () => switchSession(s.sessionId));
+        sessionList.appendChild(btn);
+      });
+    }
+
+    // ── Time formatting ─────────────────────────────
+    function formatRelativeTime(dateStr) {
+      if (!dateStr) return '';
+      const now = Date.now();
+      const then = new Date(dateStr).getTime();
+      const diff = now - then;
+      const mins = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
+
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return mins + 'm ago';
+      if (hours < 24) return hours + 'h ago';
+      if (days === 1) return 'Yesterday';
+      if (days < 7) return days + 'd ago';
+      return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    }
+
+    // ── Chat Widget ─────────────────────────────────
+    function destroyChat() {
+      welcomeState.style.display = 'flex';
+      // Remove any n8n chat elements but keep welcome state
+      Array.from(chatContainer.children).forEach(child => {
+        if (child.id !== 'welcome-state') child.remove();
+      });
+    }
+
+    function initChat(sessionId) {
+      const auth = getAuth();
+      if (!auth) return;
+
+      currentSessionId = sessionId;
+
+      // Clear container
+      chatContainer.innerHTML = '';
+      welcomeState.style.display = 'none';
+
+      // Create a mount point for n8n chat
+      const mount = document.createElement('div');
+      mount.id = 'n8n-chat';
+      mount.style.cssText = 'width:100%;height:100%;';
+      chatContainer.appendChild(mount);
+
+      // Set sessionId in localStorage for the widget
+      localStorage.setItem('n8n-chat/sessionId', sessionId);
+
+      createChat({
+        webhookUrl: WEBHOOK_URL,
+        webhookConfig: {
+          method: 'POST',
+          headers: {
+            'Authorization': auth.basic,
+          },
+        },
+        target: '#n8n-chat',
+        mode: 'fullscreen',
+        chatInputKey: 'chatInput',
+        chatSessionKey: 'sessionId',
+        loadPreviousSession: true,
+        showWelcomeScreen: false,
+        allowFileUploads: true,
+        allowedFilesMimeTypes: 'image/*,application/pdf',
+        initialMessages: [],
+        i18n: {
+          en: {
+            title: '',
+            subtitle: '',
+            footer: '',
+            getStarted: 'New Conversation',
+            inputPlaceholder: 'Ask ENJOi anything...',
+          },
+        },
+      });
+
+      // Update sidebar active state
+      highlightActiveSession();
+
+      // Close mobile sidebar
+      closeSidebar();
+    }
+
+    function switchSession(sessionId) {
+      if (sessionId === currentSessionId) return;
+      initChat(sessionId);
+    }
+
+    function highlightActiveSession() {
+      sessionList.querySelectorAll('.session-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.sessionId === currentSessionId);
+      });
+    }
+
+    // ── New Chat ────────────────────────────────────
+    btnNewChat.addEventListener('click', () => {
+      const newId = crypto.randomUUID();
+      initChat(newId);
+      // After sending first message, reload sessions to pick up the new one
+      // We'll poll briefly after a delay
+      setTimeout(() => loadSessions(), 5000);
+    });
+
+    // ── Mobile sidebar ──────────────────────────────
+    function openSidebar() { sidebar.classList.add('open'); overlay.style.display = 'block'; }
+    function closeSidebar() { sidebar.classList.remove('open'); overlay.style.display = 'none'; }
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+    });
+    overlay.addEventListener('click', closeSidebar);
+
+    // ── Auto-login if session exists ────────────────
+    if (getAuth()) {
+      enterApp();
+    }
+  </script>
+</body>
+</html>
