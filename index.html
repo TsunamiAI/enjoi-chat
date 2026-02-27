@@ -575,7 +575,8 @@
           headers: { 'Authorization': auth.basic }
         });
         if (!res.ok) throw new Error('fetch');
-        sessions = await res.json();
+        const data = await res.json();
+        sessions = data.sessions || data || [];
         renderSessions();
       } catch {
         sessions = [];
@@ -609,7 +610,7 @@
 
         const date = document.createElement('div');
         date.className = 'session-date';
-        date.textContent = formatRelativeTime(s.date || s.updatedAt || s.createdAt);
+        date.textContent = s.messageCount ? s.messageCount + ' messages' : '';
 
         btn.appendChild(title);
         btn.appendChild(date);
@@ -637,12 +638,18 @@
     }
 
     // ── Chat Widget ─────────────────────────────────
+    let chatApp = null;
+
     function destroyChat() {
+      if (chatApp) {
+        try { chatApp.unmount(); } catch(e) {}
+        chatApp = null;
+      }
+      // Remove any n8n chat mount points
+      const mount = document.getElementById('n8n-chat');
+      if (mount) mount.remove();
       welcomeState.style.display = 'flex';
-      // Remove any n8n chat elements but keep welcome state
-      Array.from(chatContainer.children).forEach(child => {
-        if (child.id !== 'welcome-state') child.remove();
-      });
+      chatContainer.appendChild(welcomeState);
     }
 
     function initChat(sessionId) {
@@ -651,20 +658,26 @@
 
       currentSessionId = sessionId;
 
-      // Clear container
-      chatContainer.innerHTML = '';
+      // Clean up previous chat instance
+      if (chatApp) {
+        try { chatApp.unmount(); } catch(e) {}
+        chatApp = null;
+      }
+      const oldMount = document.getElementById('n8n-chat');
+      if (oldMount) oldMount.remove();
+
       welcomeState.style.display = 'none';
 
-      // Create a mount point for n8n chat
+      // Create a fresh mount point for n8n chat
       const mount = document.createElement('div');
       mount.id = 'n8n-chat';
       mount.style.cssText = 'width:100%;height:100%;';
       chatContainer.appendChild(mount);
 
-      // Set sessionId in localStorage for the widget
-      localStorage.setItem('n8n-chat/sessionId', sessionId);
+      // Set sessionId in localStorage for the widget to pick up
+      localStorage.setItem('n8n-chat-sessionId', sessionId);
 
-      createChat({
+      chatApp = createChat({
         webhookUrl: WEBHOOK_URL,
         webhookConfig: {
           method: 'POST',
@@ -681,6 +694,9 @@
         allowFileUploads: true,
         allowedFilesMimeTypes: 'image/*,application/pdf',
         initialMessages: [],
+        metadata: {
+          sessionId: sessionId,
+        },
         i18n: {
           en: {
             title: '',
