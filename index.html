@@ -674,8 +674,8 @@
       mount.style.cssText = 'width:100%;height:100%;';
       chatContainer.appendChild(mount);
 
-      // Set sessionId in localStorage for the widget to pick up
-      localStorage.setItem('n8n-chat-sessionId', sessionId);
+      // Set sessionId in localStorage — the @n8n/chat widget reads from this key
+      localStorage.setItem('n8n-chat/sessionId', sessionId);
 
       chatApp = createChat({
         webhookUrl: WEBHOOK_URL,
@@ -694,9 +694,6 @@
         allowFileUploads: true,
         allowedFilesMimeTypes: 'image/*,application/pdf',
         initialMessages: [],
-        metadata: {
-          sessionId: sessionId,
-        },
         i18n: {
           en: {
             title: '',
