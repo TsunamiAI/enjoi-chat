@@ -289,6 +289,29 @@
       opacity: 0.5;
     }
 
+    .session-list-error {
+      padding: 24px 16px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--blooms);
+    }
+
+    .session-list-error p { margin-bottom: 12px; }
+
+    .btn-retry {
+      background: var(--foliage);
+      color: var(--white);
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-retry:hover { background: #0a5f65; }
+
     .sidebar-footer {
       padding: 12px 16px;
       border-top: 1px solid #eef0f4;
@@ -516,6 +539,8 @@
     // ── State ───────────────────────────────────────
     let currentSessionId = null;
     let sessions = [];
+    let sessionsError = false;
+    let sessionRefreshTimer = null;
 
     // ── Auth helpers ────────────────────────────────
     function getAuth() {
@@ -546,16 +571,23 @@
 
       setAuth(user, pass);
 
-      // Validate credentials by fetching sessions
+      // Validate credentials by testing the chat webhook
+      // We don't block on the sessions endpoint since it may be down
       try {
         const res = await fetch(SESSIONS_URL, {
           headers: { 'Authorization': 'Basic ' + btoa(user + ':' + pass) }
         });
-        if (!res.ok) throw new Error('auth');
+        // 401/403 = bad credentials, anything else = endpoint issue (let them in)
+        if (res.status === 401 || res.status === 403) throw new Error('auth');
         enterApp();
-      } catch {
-        clearAuth();
-        loginError.style.display = 'block';
+      } catch (err) {
+        if (err.message === 'auth') {
+          clearAuth();
+          loginError.style.display = 'block';
+        } else {
+          // Sessions endpoint is down but credentials might be fine — let them in
+          enterApp();
+        }
       }
     });
 
@@ -567,6 +599,9 @@
       appShell.classList.add('visible');
       footerUser.textContent = auth.user;
       loadSessions();
+      // Refresh session list every 30 seconds while app is open
+      if (sessionRefreshTimer) clearInterval(sessionRefreshTimer);
+      sessionRefreshTimer = setInterval(() => loadSessions(), 30000);
     }
 
     // ── Logout ──────────────────────────────────────
@@ -574,6 +609,8 @@
       clearAuth();
       currentSessionId = null;
       sessions = [];
+      if (sessionRefreshTimer) clearInterval(sessionRefreshTimer);
+      sessionRefreshTimer = null;
       appShell.classList.remove('visible');
       loginScreen.style.display = 'flex';
       loginUser.value = '';
@@ -588,16 +625,25 @@
       if (!auth) return;
 
       sessionsLoad.style.display = 'flex';
+      sessionsError = false;
 
       try {
         const res = await fetch(SESSIONS_URL, {
           headers: { 'Authorization': auth.basic }
         });
         if (!res.ok) throw new Error('fetch');
-        const data = await res.json();
+        const text = await res.text();
+        if (!text || !text.trim()) {
+          // Webhook returned empty/blank — treat as no sessions
+          sessions = [];
+          renderSessions();
+          return;
+        }
+        const data = JSON.parse(text);
         sessions = data.sessions || data || [];
         renderSessions();
       } catch {
+        sessionsError = true;
         sessions = [];
         renderSessions();
       } finally {
@@ -607,8 +653,21 @@
 
     function renderSessions() {
       // Clear everything except the loading indicator
-      const items = sessionList.querySelectorAll('.session-item, .session-list-empty');
+      const items = sessionList.querySelectorAll('.session-item, .session-list-empty, .session-list-error');
       items.forEach(el => el.remove());
+
+      if (sessionsError) {
+        const err = document.createElement('div');
+        err.className = 'session-list-error';
+        err.innerHTML = '<p>Couldn\'t load conversations. You can still start a new chat.</p>';
+        const retry = document.createElement('button');
+        retry.className = 'btn-retry';
+        retry.textContent = 'Retry';
+        retry.addEventListener('click', () => loadSessions());
+        err.appendChild(retry);
+        sessionList.appendChild(err);
+        return;
+      }
 
       if (sessions.length === 0) {
         const empty = document.createElement('div');
@@ -785,9 +844,7 @@
     btnNewChat.addEventListener('click', () => {
       const newId = crypto.randomUUID();
       initChat(newId);
-      // After sending first message, reload sessions to pick up the new one
-      // We'll poll briefly after a delay
-      setTimeout(() => loadSessions(), 5000);
+      // Session list will pick up the new chat via the 30s polling interval
     });
 
     // ── Mobile sidebar ──────────────────────────────
