@@ -826,8 +826,23 @@
       // Update sidebar active state
       highlightActiveSession();
 
+      // Strip [Used tools: ...] blocks that n8n embeds in stored message history
+      if (window._toolStripObserver) window._toolStripObserver.disconnect();
+      window._toolStripObserver = new MutationObserver(stripToolBlocks);
+      window._toolStripObserver.observe(document.getElementById('n8n-chat'), { childList: true, subtree: true });
+
       // Close mobile sidebar
       closeSidebar();
+    }
+
+    function stripToolBlocks() {
+      document.querySelectorAll('#n8n-chat p, #n8n-chat span, #n8n-chat div').forEach(el => {
+        if (el.children.length || el.dataset.stripped) return;
+        if (el.textContent.includes('[Used tools:')) {
+          el.textContent = el.textContent.replace(/\[Used tools:[\s\S]*?\]\s*/g, '').trim();
+          el.dataset.stripped = '1';
+        }
+      });
     }
 
     function switchSession(sessionId) {
