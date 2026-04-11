@@ -835,25 +835,33 @@
     }
 
     // ── New Chat ────────────────────────────────────
-    let awaitingFirstMessage = false;
+    let sessionPoller = null;
+
+    function pollUntilSessionAppears(targetId) {
+      // Stop any existing poller
+      if (sessionPoller) clearInterval(sessionPoller);
+      let attempts = 0;
+      sessionPoller = setInterval(async () => {
+        attempts++;
+        await loadSessions();
+        const found = sessions.some(s => s.sessionId === targetId);
+        if (found || attempts >= 10) {
+          clearInterval(sessionPoller);
+          sessionPoller = null;
+        }
+      }, 2000);
+    }
 
     btnNewChat.addEventListener('click', () => {
       const newId = crypto.randomUUID();
-      awaitingFirstMessage = true;
       initChat(newId);
-      // Watch for the bot's first response appearing in the DOM — that means
-      // n8n has processed the message and stored the session in Postgres.
+      // Watch for any DOM change in the chat (user message appearing) then
+      // start polling the sessions list until the new session shows up.
       const chatEl = document.getElementById('n8n-chat');
       if (window._newChatObserver) window._newChatObserver.disconnect();
       window._newChatObserver = new MutationObserver(() => {
-        if (!awaitingFirstMessage) return;
-        // Any text content appearing in the chat means a message was exchanged
-        const text = chatEl.innerText || '';
-        if (text.trim().length > 20) {
-          awaitingFirstMessage = false;
-          window._newChatObserver.disconnect();
-          setTimeout(loadSessions, 1000);
-        }
+        window._newChatObserver.disconnect();
+        pollUntilSessionAppears(newId);
       });
       window._newChatObserver.observe(chatEl, { childList: true, subtree: true });
     });
