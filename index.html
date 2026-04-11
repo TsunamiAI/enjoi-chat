@@ -845,7 +845,7 @@
         attempts++;
         await loadSessions();
         const found = sessions.some(s => s.sessionId === targetId);
-        if (found || attempts >= 10) {
+        if (found || attempts >= 6) {
           clearInterval(sessionPoller);
           sessionPoller = null;
         }
