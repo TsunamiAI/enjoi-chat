@@ -835,25 +835,27 @@
     }
 
     // ── New Chat ────────────────────────────────────
-    // Intercept the first chat webhook response so we can refresh the session
-    // list after the first message is sent (session only exists in Postgres once
-    // n8n has processed it, not when the UUID is created).
     let awaitingFirstMessage = false;
-    const _origFetch = window.fetch;
-    window.fetch = async function(...args) {
-      const response = await _origFetch.apply(this, args);
-      const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
-      if (awaitingFirstMessage && url.includes(WEBHOOK_URL)) {
-        awaitingFirstMessage = false;
-        setTimeout(loadSessions, 800);
-      }
-      return response;
-    };
 
     btnNewChat.addEventListener('click', () => {
       const newId = crypto.randomUUID();
       awaitingFirstMessage = true;
       initChat(newId);
+      // Watch for the bot's first response appearing in the DOM — that means
+      // n8n has processed the message and stored the session in Postgres.
+      const chatEl = document.getElementById('n8n-chat');
+      if (window._newChatObserver) window._newChatObserver.disconnect();
+      window._newChatObserver = new MutationObserver(() => {
+        if (!awaitingFirstMessage) return;
+        // Any text content appearing in the chat means a message was exchanged
+        const text = chatEl.innerText || '';
+        if (text.trim().length > 20) {
+          awaitingFirstMessage = false;
+          window._newChatObserver.disconnect();
+          setTimeout(loadSessions, 1000);
+        }
+      });
+      window._newChatObserver.observe(chatEl, { childList: true, subtree: true });
     });
 
     // ── Mobile sidebar ──────────────────────────────
